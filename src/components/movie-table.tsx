@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { Alert, ScrollView, StyleSheet, TextInput, TouchableOpacity, View } from 'react-native';
+import { Alert, Platform, ScrollView, StyleSheet, TextInput, TouchableOpacity, View } from 'react-native';
 
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
@@ -19,6 +19,16 @@ export default function MovieTable({ puedeAdministrar = false, onEditMovie }: Mo
   const [terminoBusqueda, setTerminoBusqueda] = useState('');
 
   const handleDeleteMovie = (pelicula: Pelicula) => {
+    const confirmDelete = () => eliminarPeliculaPersistida(pelicula.codigo);
+
+    if (Platform.OS === 'web') {
+      const shouldDelete = window.confirm(`¿Deseas eliminar "${pelicula.nombre}"?`);
+      if (shouldDelete) {
+        confirmDelete();
+      }
+      return;
+    }
+
     Alert.alert(
       'Eliminar película',
       `¿Deseas eliminar "${pelicula.nombre}"?`,
@@ -27,7 +37,7 @@ export default function MovieTable({ puedeAdministrar = false, onEditMovie }: Mo
         {
           text: 'Eliminar',
           style: 'destructive',
-          onPress: () => eliminarPeliculaPersistida(pelicula.codigo),
+          onPress: confirmDelete,
         },
       ],
     );
@@ -66,29 +76,29 @@ export default function MovieTable({ puedeAdministrar = false, onEditMovie }: Mo
         <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.tableScrollContainer}>
           <View style={[styles.table, { borderColor: theme.textSecondary }]}>
             <View style={[styles.rowHeader, { backgroundColor: theme.backgroundSelected, borderBottomColor: theme.textSecondary }]}>
-              <ThemedText type="smallBold" style={[styles.cell, styles.headerCell]}>Código</ThemedText>
-              <ThemedText type="smallBold" style={[styles.cell, styles.headerCell]}>Nombre</ThemedText>
-              <ThemedText type="smallBold" style={[styles.cell, styles.headerCell]}>Género</ThemedText>
-              <ThemedText type="smallBold" style={[styles.cell, styles.headerCell]}>Duración</ThemedText>
-              <ThemedText type="smallBold" style={[styles.cell, styles.headerCell]}>Clasif.</ThemedText>
-              <ThemedText type="smallBold" style={[styles.cell, styles.headerCell]}>Sala</ThemedText>
-              <ThemedText type="smallBold" style={[styles.cell, styles.headerCell]}>Hora</ThemedText>
-              <ThemedText type="smallBold" style={[styles.cell, styles.headerCell]}>Precio</ThemedText>
-              <ThemedText type="smallBold" style={[styles.cell, styles.headerCell]}>Estado</ThemedText>
-              {puedeAdministrar && <ThemedText type="smallBold" style={[styles.cell, styles.headerCell, styles.actionCell]}>Acciones</ThemedText>}
+              <ThemedText type="smallBold" style={[styles.fixedCell, styles.headerCell]}>Código</ThemedText>
+              <ThemedText type="smallBold" style={[styles.fixedCell, styles.headerCell]}>Nombre</ThemedText>
+              <ThemedText type="smallBold" style={[styles.fixedCell, styles.headerCell]}>Género</ThemedText>
+              <ThemedText type="smallBold" style={[styles.fixedCell, styles.headerCell]}>Duración</ThemedText>
+              <ThemedText type="smallBold" style={[styles.fixedCell, styles.headerCell]}>Clasif.</ThemedText>
+              <ThemedText type="smallBold" style={[styles.fixedCell, styles.headerCell]}>Sala</ThemedText>
+              <ThemedText type="smallBold" style={[styles.fixedCell, styles.headerCell]}>Hora</ThemedText>
+              <ThemedText type="smallBold" style={[styles.fixedCell, styles.headerCell]}>Precio</ThemedText>
+              <ThemedText type="smallBold" style={[styles.fixedCell, styles.headerCell]}>Estado</ThemedText>
+              {puedeAdministrar && <ThemedText type="smallBold" style={[styles.fixedCell, styles.headerCell, styles.actionCell]}>Acciones</ThemedText>}
             </View>
 
             {peliculasFiltradas.map((pelicula) => (
               <View key={pelicula.codigo} style={[styles.rowData, { backgroundColor: theme.background, borderBottomColor: theme.textSecondary }]}>
-                <ThemedText type="small" style={styles.cell}>{pelicula.codigo}</ThemedText>
-                <ThemedText type="small" style={styles.cell}>{pelicula.nombre}</ThemedText>
-                <ThemedText type="small" style={styles.cell}>{pelicula.genero}</ThemedText>
-                <ThemedText type="small" style={styles.cell}>{pelicula.duracion} min</ThemedText>
-                <ThemedText type="small" style={styles.cell}>{pelicula.clasificacion}</ThemedText>
-                <ThemedText type="small" style={styles.cell}>{pelicula.salaAsignada}</ThemedText>
-                <ThemedText type="small" style={styles.cell}>{pelicula.hora}</ThemedText>
-                <ThemedText type="small" style={styles.cell}>${pelicula.precioEntrada.toFixed(2)}</ThemedText>
-                <ThemedText type="small" style={styles.cell}>{pelicula.estado}</ThemedText>
+                <ThemedText type="small" style={[styles.fixedCell]}>{pelicula.codigo}</ThemedText>
+                <ThemedText type="small" style={[styles.fixedCell]}>{pelicula.nombre}</ThemedText>
+                <ThemedText type="small" style={[styles.fixedCell]}>{pelicula.genero}</ThemedText>
+                <ThemedText type="small" style={[styles.fixedCell]}>{pelicula.duracion} min</ThemedText>
+                <ThemedText type="small" style={[styles.fixedCell]}>{pelicula.clasificacion}</ThemedText>
+                <ThemedText type="small" style={[styles.fixedCell]}>{pelicula.salaAsignada}</ThemedText>
+                <ThemedText type="small" style={[styles.fixedCell]}>{pelicula.hora}</ThemedText>
+                <ThemedText type="small" style={[styles.fixedCell]}>${pelicula.precioEntrada.toFixed(2)}</ThemedText>
+                <ThemedText type="small" style={[styles.fixedCell]}>{pelicula.estado}</ThemedText>
                 {puedeAdministrar && (
                   <View style={[styles.actionsCell, styles.actionCell, { backgroundColor: theme.backgroundElement, borderLeftColor: theme.textSecondary }]}>
                     <TouchableOpacity
@@ -157,19 +167,23 @@ const styles = StyleSheet.create({
     backgroundColor: '#ffffff',
     alignItems: 'stretch',
   },
-  cell: {
-    flex: 1,
-    minWidth: 110,
+  fixedCell: {
+    width: 120,
+    minWidth: 120,
+    maxWidth: 120,
     padding: 10,
     justifyContent: 'center',
-    flexShrink: 1,
+    overflow: 'hidden',
+    flexShrink: 0,
   },
   headerCell: {
     textAlign: 'center',
   },
   actionCell: {
     minWidth: 150,
-    flexBasis: 150,
+    width: 150,
+    maxWidth: 150,
+    flexShrink: 0,
   },
   actionsCell: {
     flexDirection: 'row',
