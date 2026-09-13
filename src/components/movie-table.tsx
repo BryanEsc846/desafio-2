@@ -1,15 +1,37 @@
 import { useMemo, useState } from 'react';
-import { ScrollView, StyleSheet, TextInput, TouchableOpacity, View } from 'react-native';
+import { Alert, ScrollView, StyleSheet, TextInput, TouchableOpacity, View } from 'react-native';
 
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { useTheme } from '@/hooks/use-theme';
 import { useAppSelector } from '@/store/hooks';
+import { eliminarPeliculaPersistida } from '@/store/store';
+import type { Pelicula } from '@/types/pelicula';
 
-export default function MovieTable({ puedeAdministrar = false }: { puedeAdministrar?: boolean }) {
+interface MovieTableProps {
+  puedeAdministrar?: boolean;
+  onEditMovie?: (pelicula: Pelicula) => void;
+}
+
+export default function MovieTable({ puedeAdministrar = false, onEditMovie }: MovieTableProps) {
   const theme = useTheme();
   const peliculas = useAppSelector((state) => state.peliculas.lista);
   const [terminoBusqueda, setTerminoBusqueda] = useState('');
+
+  const handleDeleteMovie = (pelicula: Pelicula) => {
+    Alert.alert(
+      'Eliminar película',
+      `¿Deseas eliminar "${pelicula.nombre}"?`,
+      [
+        { text: 'Cancelar', style: 'cancel' },
+        {
+          text: 'Eliminar',
+          style: 'destructive',
+          onPress: () => eliminarPeliculaPersistida(pelicula.codigo),
+        },
+      ],
+    );
+  };
 
   const peliculasFiltradas = useMemo(() => {
     const texto = terminoBusqueda.toLowerCase();
@@ -41,19 +63,19 @@ export default function MovieTable({ puedeAdministrar = false }: { puedeAdminist
           No se encontraron películas que coincidan con la búsqueda.
         </ThemedText>
       ) : (
-        <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.tableScrollContainer}>
           <View style={[styles.table, { borderColor: theme.textSecondary }]}>
             <View style={[styles.rowHeader, { backgroundColor: theme.backgroundSelected, borderBottomColor: theme.textSecondary }]}>
-              <ThemedText type="smallBold" style={styles.cell}>Código</ThemedText>
-              <ThemedText type="smallBold" style={styles.cell}>Nombre</ThemedText>
-              <ThemedText type="smallBold" style={styles.cell}>Género</ThemedText>
-              <ThemedText type="smallBold" style={styles.cell}>Duración</ThemedText>
-              <ThemedText type="smallBold" style={styles.cell}>Clasif.</ThemedText>
-              <ThemedText type="smallBold" style={styles.cell}>Sala</ThemedText>
-              <ThemedText type="smallBold" style={styles.cell}>Hora</ThemedText>
-              <ThemedText type="smallBold" style={styles.cell}>Precio</ThemedText>
-              <ThemedText type="smallBold" style={styles.cell}>Estado</ThemedText>
-              {puedeAdministrar && <ThemedText type="smallBold" style={styles.cell}>Acciones</ThemedText>}
+              <ThemedText type="smallBold" style={[styles.cell, styles.headerCell]}>Código</ThemedText>
+              <ThemedText type="smallBold" style={[styles.cell, styles.headerCell]}>Nombre</ThemedText>
+              <ThemedText type="smallBold" style={[styles.cell, styles.headerCell]}>Género</ThemedText>
+              <ThemedText type="smallBold" style={[styles.cell, styles.headerCell]}>Duración</ThemedText>
+              <ThemedText type="smallBold" style={[styles.cell, styles.headerCell]}>Clasif.</ThemedText>
+              <ThemedText type="smallBold" style={[styles.cell, styles.headerCell]}>Sala</ThemedText>
+              <ThemedText type="smallBold" style={[styles.cell, styles.headerCell]}>Hora</ThemedText>
+              <ThemedText type="smallBold" style={[styles.cell, styles.headerCell]}>Precio</ThemedText>
+              <ThemedText type="smallBold" style={[styles.cell, styles.headerCell]}>Estado</ThemedText>
+              {puedeAdministrar && <ThemedText type="smallBold" style={[styles.cell, styles.headerCell, styles.actionCell]}>Acciones</ThemedText>}
             </View>
 
             {peliculasFiltradas.map((pelicula) => (
@@ -68,9 +90,23 @@ export default function MovieTable({ puedeAdministrar = false }: { puedeAdminist
                 <ThemedText type="small" style={styles.cell}>${pelicula.precioEntrada.toFixed(2)}</ThemedText>
                 <ThemedText type="small" style={styles.cell}>{pelicula.estado}</ThemedText>
                 {puedeAdministrar && (
-                  <TouchableOpacity style={styles.actionButton}>
-                    <ThemedText type="small" style={styles.actionText}>Editar</ThemedText>
-                  </TouchableOpacity>
+                  <View style={[styles.actionsCell, styles.actionCell, { backgroundColor: theme.backgroundElement, borderLeftColor: theme.textSecondary }]}>
+                    <TouchableOpacity
+                      style={[styles.actionButton, { backgroundColor: theme.backgroundSelected }, styles.editButton]}
+                      onPress={() => onEditMovie?.(pelicula)}
+                      accessibilityRole="button"
+                    >
+                      <ThemedText type="small" style={[styles.actionText, { color: theme.text }]}>✏️</ThemedText>
+                    </TouchableOpacity>
+
+                    <TouchableOpacity
+                      style={[styles.actionButton, { backgroundColor: theme.backgroundElement }, styles.deleteButton]}
+                      onPress={() => handleDeleteMovie(pelicula)}
+                      accessibilityRole="button"
+                    >
+                      <ThemedText type="small" style={[styles.deleteText, { color: theme.textSecondary }]}>🗑️</ThemedText>
+                    </TouchableOpacity>
+                  </View>
                 )}
               </View>
             ))}
@@ -97,8 +133,11 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     marginTop: 12,
   },
+  tableScrollContainer: {
+    paddingBottom: 4,
+  },
   table: {
-    minWidth: 920,
+    minWidth: 1100,
     borderWidth: 1,
     borderColor: '#e5e7eb',
     borderRadius: 12,
@@ -109,25 +148,54 @@ const styles = StyleSheet.create({
     backgroundColor: '#f3f4f6',
     borderBottomWidth: 1,
     borderBottomColor: '#d1d5db',
+    alignItems: 'stretch',
   },
   rowData: {
     flexDirection: 'row',
     borderBottomWidth: 1,
     borderBottomColor: '#e5e7eb',
     backgroundColor: '#ffffff',
+    alignItems: 'stretch',
   },
   cell: {
-    minWidth: 90,
+    flex: 1,
+    minWidth: 110,
     padding: 10,
+    justifyContent: 'center',
     flexShrink: 1,
   },
+  headerCell: {
+    textAlign: 'center',
+  },
+  actionCell: {
+    minWidth: 150,
+    flexBasis: 150,
+  },
+  actionsCell: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    paddingHorizontal: 8,
+    borderLeftWidth: 1,
+  },
   actionButton: {
-    padding: 10,
+    width: 36,
+    height: 36,
+    borderRadius: 8,
     justifyContent: 'center',
     alignItems: 'center',
   },
+  editButton: {
+    opacity: 1,
+  },
+  deleteButton: {
+    opacity: 1,
+  },
   actionText: {
-    color: '#2563eb',
+    fontWeight: '600',
+  },
+  deleteText: {
     fontWeight: '600',
   },
 });

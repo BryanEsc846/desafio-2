@@ -5,42 +5,13 @@ interface PeliculasState {
   lista: Pelicula[];
 }
 
+interface EditarPeliculaPayload {
+  codigoAnterior: string;
+  pelicula: Pelicula;
+}
+
 const initialState: PeliculasState = {
-  lista: [
-    {
-      codigo: 'PEL-01',
-      nombre: 'Dune: Parte Dos',
-      genero: 'Ciencia Ficción',
-      duracion: 166,
-      clasificacion: 'B',
-      salaAsignada: '1',
-      hora: '19:00',
-      precioEntrada: 9.5,
-      estado: 'Disponible',
-    },
-    {
-      codigo: 'PEL-02',
-      nombre: 'Kung Fu Panda 4',
-      genero: 'Animación',
-      duracion: 94,
-      clasificacion: 'A',
-      salaAsignada: '2',
-      hora: '21:30',
-      precioEntrada: 7.0,
-      estado: 'Disponible',
-    },
-    {
-      codigo: 'PEL-03',
-      nombre: 'The Batman',
-      genero: 'Acción',
-      duracion: 176,
-      clasificacion: 'C',
-      salaAsignada: '3',
-      hora: '16:30',
-      precioEntrada: 10.0,
-      estado: 'Disponible',
-    },
-  ],
+  lista: [],
 };
 
 export const peliculasSlice = createSlice({
@@ -49,6 +20,9 @@ export const peliculasSlice = createSlice({
   reducers: {
     agregarPelicula: (state, action: PayloadAction<Pelicula>) => {
       state.lista.push(action.payload);
+    },
+    cargarPeliculas: (state, action: PayloadAction<Pelicula[]>) => {
+      state.lista = action.payload;
     },
     eliminarPelicula: (state, action: PayloadAction<string>) => {
       state.lista = state.lista.filter((p) => p.codigo !== action.payload);
@@ -59,13 +33,14 @@ export const peliculasSlice = createSlice({
         pelicula.estado = pelicula.estado === 'Disponible' ? 'No disponible' : 'Disponible';
       }
     },
-    editarPelicula: (state, action: PayloadAction<Pelicula>) => {
-      state.lista = state.lista.map((p) => (p.codigo === action.payload.codigo ? action.payload : p));
+    editarPelicula: (state, action: PayloadAction<EditarPeliculaPayload>) => {
+      const { codigoAnterior, pelicula } = action.payload;
+      state.lista = state.lista.map((p) => (p.codigo === codigoAnterior ? pelicula : p));
     },
   },
 });
 
-export const { agregarPelicula, eliminarPelicula, cambiarEstadoPelicula, editarPelicula } =
+export const { agregarPelicula, cargarPeliculas, eliminarPelicula, cambiarEstadoPelicula, editarPelicula } =
   peliculasSlice.actions;
 
 export default peliculasSlice.reducer;

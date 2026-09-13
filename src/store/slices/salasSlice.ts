@@ -36,6 +36,9 @@ export const salasSlice = createSlice({
   name: 'salas',
   initialState,
   reducers: {
+    cargarSalas: (state, action: PayloadAction<Sala[]>) => {
+      state.lista = action.payload;
+    },
     actualizarEstadoAsiento: (
       state,
       action: PayloadAction<{ salaId: string; asientoId: string; nuevoEstado: EstadoAsiento }>,
@@ -61,6 +64,6 @@ export const salasSlice = createSlice({
   },
 });
 
-export const { actualizarEstadoAsiento, limpiarAsientosReservados } = salasSlice.actions;
+export const { cargarSalas, actualizarEstadoAsiento, limpiarAsientosReservados } = salasSlice.actions;
 
 export default salasSlice.reducer;

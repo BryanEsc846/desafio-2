@@ -1,34 +1,43 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Alert, ScrollView, StyleSheet, TextInput, TouchableOpacity, View } from 'react-native';
 
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { useTheme } from '@/hooks/use-theme';
 import { useAppDispatch, useAppSelector } from '@/store/hooks';
-import { agregarPelicula } from '@/store/slices/peliculasSlice';
+import { agregarPelicula, editarPelicula } from '@/store/slices/peliculasSlice';
 import type { Pelicula } from '@/types/pelicula';
 
 interface MovieFormProps {
   onSuccess?: () => void;
+  initialData?: Pelicula | null;
 }
 
-export default function MovieForm({ onSuccess }: MovieFormProps) {
+const emptyFormData: Pelicula = {
+  codigo: '',
+  nombre: '',
+  genero: '',
+  duracion: 0,
+  clasificacion: '',
+  salaAsignada: '',
+  hora: '',
+  precioEntrada: 0,
+  estado: 'Disponible',
+};
+
+export default function MovieForm({ onSuccess, initialData }: MovieFormProps) {
   const dispatch = useAppDispatch();
   const theme = useTheme();
   const peliculas = useAppSelector((state) => state.peliculas.lista);
 
-  const [formData, setFormData] = useState<Pelicula>({
-    codigo: '',
-    nombre: '',
-    genero: '',
-    duracion: 0,
-    clasificacion: '',
-    salaAsignada: '',
-    hora: '',
-    precioEntrada: 0,
-    estado: 'Disponible',
-  });
+  const [formData, setFormData] = useState<Pelicula>(emptyFormData);
   const [error, setError] = useState<string>('');
+  const isEditing = Boolean(initialData);
+
+  useEffect(() => {
+    setFormData(initialData ?? emptyFormData);
+    setError('');
+  }, [initialData]);
 
   const salas = [
     { value: '1', label: 'Sala 1' },
@@ -67,38 +76,44 @@ export default function MovieForm({ onSuccess }: MovieFormProps) {
       return;
     }
 
-    const codigoDuplicado = peliculas.some((p) => p.codigo === formData.codigo);
+    const codigoDuplicado = peliculas.some(
+      (p) => p.codigo === formData.codigo && p.codigo !== initialData?.codigo,
+    );
     if (codigoDuplicado) {
       setError('Error: Ya existe una película registrada con este código.');
       return;
     }
 
     const horarioDuplicado = peliculas.some(
-      (p) => p.salaAsignada === formData.salaAsignada && p.hora === formData.hora,
+      (p) =>
+        p.salaAsignada === formData.salaAsignada &&
+        p.hora === formData.hora &&
+        (!initialData || p.codigo !== initialData.codigo),
     );
     if (horarioDuplicado) {
       setError('Error: Ya existe una película registrada en esa sala a esa hora.');
       return;
     }
 
-    dispatch(agregarPelicula(formData));
-    Alert.alert('¡Película agregada con éxito!');
-    setFormData({
-      codigo: '',
-      nombre: '',
-      genero: '',
-      duracion: 0,
-      clasificacion: '',
-      salaAsignada: '',
-      hora: '',
-      precioEntrada: 0,
-      estado: 'Disponible',
-    });
+    if (isEditing && initialData) {
+      dispatch(editarPelicula({ codigoAnterior: initialData.codigo, pelicula: formData }));
+      Alert.alert('¡Película actualizada con éxito!');
+    } else {
+      dispatch(agregarPelicula(formData));
+      Alert.alert('¡Película agregada con éxito!');
+      setFormData(emptyFormData);
+    }
+
     onSuccess?.();
   };
 
   return (
-    <ScrollView>
+    <ScrollView
+      showsVerticalScrollIndicator
+      contentContainerStyle={styles.formScrollContent}
+      style={styles.formScrollView}
+      keyboardShouldPersistTaps="handled"
+    >
       <ThemedView style={styles.container}>
         {error ? (
           <ThemedView type="backgroundElement" style={styles.errorBox}>
@@ -214,7 +229,9 @@ export default function MovieForm({ onSuccess }: MovieFormProps) {
         </View>
 
         <TouchableOpacity onPress={handleSubmit} style={styles.submitButton}>
-          <ThemedText type="smallBold" style={styles.submitText}>Guardar Película</ThemedText>
+          <ThemedText type="smallBold" style={styles.submitText}>
+            {isEditing ? 'Guardar cambios' : 'Guardar Película'}
+          </ThemedText>
         </TouchableOpacity>
       </ThemedView>
     </ScrollView>
@@ -222,6 +239,12 @@ export default function MovieForm({ onSuccess }: MovieFormProps) {
 }
 
 const styles = StyleSheet.create({
+  formScrollView: {
+    maxHeight: 560,
+  },
+  formScrollContent: {
+    paddingBottom: 8,
+  },
   container: {
     gap: 12,
   },

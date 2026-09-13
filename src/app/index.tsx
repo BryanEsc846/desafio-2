@@ -18,13 +18,15 @@ import MovieTable from '@/components/movie-table';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import TicketBooking from '@/components/ticket-booking';
+import type { Pelicula } from '@/types/pelicula';
 
 const ADMIN_PIN = '1234';
 
 export default function CinemaHomeScreen() {
   const [activeTab, setActiveTab] = useState<'peliculas' | 'ventas' | 'historial' | 'administrador'>('peliculas');
-  const [adminTab, setAdminTab] = useState<'dashboard' | 'peliculas' | 'ventas'>('dashboard');
+  const [adminTab, setAdminTab] = useState<'dashboard' | 'peliculas' >('dashboard');
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [editingMovie, setEditingMovie] = useState<Pelicula | null>(null);
   const [isAdminUnlocked, setIsAdminUnlocked] = useState(false);
   const [isAdminPinModalOpen, setIsAdminPinModalOpen] = useState(false);
   const [pinInput, setPinInput] = useState('');
@@ -43,8 +45,12 @@ export default function CinemaHomeScreen() {
   const adminTabs = [
     { key: 'dashboard', label: 'Inicio' },
     { key: 'peliculas', label: 'Películas' },
-    { key: 'ventas', label: 'Ventas' },
   ] as const;
+
+  const openMovieModal = (movie: Pelicula | null = null) => {
+    setEditingMovie(movie);
+    setIsModalOpen(true);
+  };
 
   const handleAdminUnlock = async () => {
     if (isAdminUnlocked) {
@@ -167,13 +173,16 @@ export default function CinemaHomeScreen() {
               <View style={styles.sectionHeader}>
                 <ThemedText type="subtitle">GESTIÓN DE PELÍCULAS</ThemedText>
                 {activeTab === 'administrador' && (
-                  <TouchableOpacity onPress={() => setIsModalOpen(true)} style={styles.primaryButton}>
+                  <TouchableOpacity onPress={() => openMovieModal()} style={styles.primaryButton}>
                     <ThemedText type="smallBold" style={styles.primaryButtonText}>+ AGREGAR PELÍCULA</ThemedText>
                   </TouchableOpacity>
                 )}
               </View>
 
-              <MovieTable puedeAdministrar={activeTab === 'administrador'} />
+              <MovieTable
+                puedeAdministrar={activeTab === 'administrador'}
+                onEditMovie={(pelicula) => openMovieModal(pelicula)}
+              />
             </View>
           )}
 
@@ -191,13 +200,22 @@ export default function CinemaHomeScreen() {
           <View style={styles.modalOverlay}>
             <ThemedView type="backgroundElement" style={styles.modalCard}>
               <View style={styles.modalHeader}>
-                <ThemedText type="subtitle">FORMULARIO PELÍCULA</ThemedText>
-                <TouchableOpacity onPress={() => setIsModalOpen(false)}>
+                <ThemedText type="subtitle">{editingMovie ? 'EDITAR PELÍCULA' : 'FORMULARIO PELÍCULA'}</ThemedText>
+                <TouchableOpacity onPress={() => {
+                  setIsModalOpen(false);
+                  setEditingMovie(null);
+                }}>
                   <ThemedText type="smallBold" style={styles.closeText}>✕</ThemedText>
                 </TouchableOpacity>
               </View>
 
-              <MovieForm onSuccess={() => setIsModalOpen(false)} />
+              <MovieForm
+                initialData={editingMovie}
+                onSuccess={() => {
+                  setIsModalOpen(false);
+                  setEditingMovie(null);
+                }}
+              />
             </ThemedView>
           </View>
         </Modal>
@@ -310,6 +328,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
+    flexWrap: 'wrap',
     gap: 12,
   },
   primaryButton: {
@@ -317,6 +336,8 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14,
     paddingVertical: 10,
     borderRadius: 10,
+    maxWidth: '100%',
+    alignSelf: 'flex-start',
   },
   primaryButtonText: {
     color: '#ffffff',
@@ -352,8 +373,10 @@ const styles = StyleSheet.create({
   modalCard: {
     width: '100%',
     maxWidth: 540,
+    maxHeight: '82%',
     borderRadius: 16,
     padding: 16,
+    overflow: 'hidden',
   },
   modalHeader: {
     flexDirection: 'row',

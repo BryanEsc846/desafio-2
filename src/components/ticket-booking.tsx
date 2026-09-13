@@ -23,6 +23,8 @@ export default function TicketBooking() {
   const [peliculaNombre, setPeliculaNombre] = useState('');
   const [funcion, setFuncion] = useState('');
   const [salaId, setSalaId] = useState('');
+  const [isPeliculaOpen, setIsPeliculaOpen] = useState(false);
+  const [isFuncionOpen, setIsFuncionOpen] = useState(false);
 
   const nombresPeliculasUnicas = useMemo(
     () => Array.from(new Set(peliculasDisponibles.map((p) => p.nombre))),
@@ -117,45 +119,78 @@ export default function TicketBooking() {
       <View style={styles.row}>
         <View style={styles.field}>
           <ThemedText type="smallBold">1. Película</ThemedText>
-          <View style={[styles.selectBox, { backgroundColor: theme.backgroundElement, borderColor: theme.textSecondary }]}>
+          <TouchableOpacity
+            onPress={() => setIsPeliculaOpen((value) => !value)}
+            style={[styles.selectBox, { backgroundColor: theme.backgroundElement, borderColor: theme.textSecondary }]}>
             <ThemedText type="small" style={[styles.selectText, { color: theme.text }]}>
               {peliculaNombre || 'Elige una película'}
             </ThemedText>
-          </View>
-          {nombresPeliculasUnicas.map((nombre) => (
-            <TouchableOpacity
-              key={nombre}
-              onPress={() => handlePeliculaChange(nombre)}
-              style={[
-                styles.optionButton,
-                { backgroundColor: theme.background, borderColor: theme.textSecondary },
-                peliculaNombre === nombre && { backgroundColor: theme.backgroundSelected, borderColor: theme.text },
-              ]}>
-              <ThemedText type="small" themeColor="text">{nombre}</ThemedText>
-            </TouchableOpacity>
-          ))}
+          </TouchableOpacity>
+
+          {isPeliculaOpen && (
+            <View style={[styles.optionsList, { backgroundColor: theme.background, borderColor: theme.textSecondary }]}>
+              {nombresPeliculasUnicas.length === 0 ? (
+                <ThemedText type="small" style={styles.emptyOption}>Sin películas disponibles</ThemedText>
+              ) : (
+                nombresPeliculasUnicas.map((nombre) => (
+                  <TouchableOpacity
+                    key={nombre}
+                    onPress={() => {
+                      handlePeliculaChange(nombre);
+                      setIsPeliculaOpen(false);
+                    }}
+                    style={[
+                      styles.optionButton,
+                      { backgroundColor: theme.background, borderColor: theme.textSecondary },
+                      peliculaNombre === nombre && { backgroundColor: theme.backgroundSelected, borderColor: theme.text },
+                    ]}>
+                    <ThemedText type="small" themeColor="text">{nombre}</ThemedText>
+                  </TouchableOpacity>
+                ))
+              )}
+            </View>
+          )}
         </View>
 
         <View style={styles.field}>
           <ThemedText type="smallBold">2. Función</ThemedText>
-          <View style={[styles.selectBox, { backgroundColor: theme.backgroundElement, borderColor: theme.textSecondary }]}>
+          <TouchableOpacity
+            onPress={() => peliculaNombre && setIsFuncionOpen((value) => !value)}
+            disabled={!peliculaNombre}
+            style={[
+              styles.selectBox,
+              { backgroundColor: theme.backgroundElement, borderColor: theme.textSecondary },
+              !peliculaNombre && styles.selectBoxDisabled,
+            ]}>
             <ThemedText type="small" style={[styles.selectText, { color: theme.text }]}>
               {funcion || 'Elige una hora'}
             </ThemedText>
-          </View>
-          {horasDisponibles.map((hora) => (
-            <TouchableOpacity
-              key={hora}
-              onPress={() => handleFuncionChange(hora)}
-              style={[
-                styles.optionButton,
-                { backgroundColor: theme.background, borderColor: theme.textSecondary },
-                funcion === hora && { backgroundColor: theme.backgroundSelected, borderColor: theme.text },
-              ]}
-              disabled={!peliculaNombre}>
-              <ThemedText type="small" themeColor="text">{hora}</ThemedText>
-            </TouchableOpacity>
-          ))}
+          </TouchableOpacity>
+
+          {isFuncionOpen && peliculaNombre && (
+            <View style={[styles.optionsList, { backgroundColor: theme.background, borderColor: theme.textSecondary }]}>
+              {horasDisponibles.length === 0 ? (
+                <ThemedText type="small" style={styles.emptyOption}>Sin horarios disponibles</ThemedText>
+              ) : (
+                horasDisponibles.map((hora) => (
+                  <TouchableOpacity
+                    key={hora}
+                    onPress={() => {
+                      handleFuncionChange(hora);
+                      setIsFuncionOpen(false);
+                    }}
+                    style={[
+                      styles.optionButton,
+                      { backgroundColor: theme.background, borderColor: theme.textSecondary },
+                      funcion === hora && { backgroundColor: theme.backgroundSelected, borderColor: theme.text },
+                    ]}
+                    disabled={!peliculaNombre}>
+                    <ThemedText type="small" themeColor="text">{hora}</ThemedText>
+                  </TouchableOpacity>
+                ))
+              )}
+            </View>
+          )}
         </View>
       </View>
 
@@ -231,8 +266,18 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: '#d1d5db',
   },
+  selectBoxDisabled: {
+    opacity: 0.5,
+  },
   selectText: {
     color: '#374151',
+  },
+  optionsList: {
+    gap: 8,
+    marginTop: 8,
+    borderWidth: 1,
+    borderRadius: 10,
+    padding: 8,
   },
   optionButton: {
     paddingHorizontal: 12,
@@ -241,6 +286,10 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: '#d1d5db',
     backgroundColor: '#ffffff',
+  },
+  emptyOption: {
+    color: '#6b7280',
+    paddingVertical: 4,
   },
   optionButtonSelected: {
     backgroundColor: '#dbeafe',
