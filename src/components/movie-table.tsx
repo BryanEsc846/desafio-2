@@ -13,10 +13,38 @@ interface MovieTableProps {
   onEditMovie?: (pelicula: Pelicula) => void;
 }
 
+type Filtro = 'Todos' | string;
+type FiltroAbierto = 'genero' | 'clasificacion' | 'sala' | 'estado' | null;
+interface FiltroOpcion {
+  value: string;
+  label: string;
+}
+
+const GENEROS = ['Acción', 'Comedia', 'Drama', 'Ciencia Ficción', 'Animación'];
+const CLASIFICACIONES: FiltroOpcion[] = [
+  { value: 'A', label: 'A (Todo público)' },
+  { value: 'B', label: 'B (+12 años)' },
+  { value: 'C', label: 'C (+18 años)' },
+];
+const SALAS: FiltroOpcion[] = [
+  { value: '1', label: 'Sala 1' },
+  { value: '2', label: 'Sala 2' },
+  { value: '3', label: 'Sala VIP' },
+];
+const ESTADOS: FiltroOpcion[] = [
+  { value: 'Disponible', label: 'Disponible' },
+  { value: 'No disponible', label: 'No disponible' },
+];
+
 export default function MovieTable({ puedeAdministrar = false, onEditMovie }: MovieTableProps) {
   const theme = useTheme();
   const peliculas = useAppSelector((state) => state.peliculas.lista);
   const [terminoBusqueda, setTerminoBusqueda] = useState('');
+  const [filtroGenero, setFiltroGenero] = useState<Filtro>('Todos');
+  const [filtroClasificacion, setFiltroClasificacion] = useState<Filtro>('Todos');
+  const [filtroSala, setFiltroSala] = useState<Filtro>('Todos');
+  const [filtroEstado, setFiltroEstado] = useState<Filtro>('Todos');
+  const [filtroAbierto, setFiltroAbierto] = useState<FiltroAbierto>(null);
 
   const handleDeleteMovie = (pelicula: Pelicula) => {
     const confirmDelete = () => eliminarPeliculaPersistida(pelicula.codigo);
@@ -44,17 +72,72 @@ export default function MovieTable({ puedeAdministrar = false, onEditMovie }: Mo
   };
 
   const peliculasFiltradas = useMemo(() => {
-    const texto = terminoBusqueda.toLowerCase();
+    const texto = terminoBusqueda.trim().toLowerCase();
     return peliculas.filter((pelicula) => {
       return (
-        pelicula.nombre.toLowerCase().includes(texto) ||
-        pelicula.genero.toLowerCase().includes(texto) ||
-        pelicula.clasificacion.toLowerCase().includes(texto) ||
-        pelicula.salaAsignada.toLowerCase().includes(texto) ||
-        pelicula.hora.toLowerCase().includes(texto)
+        (pelicula.nombre.toLowerCase().includes(texto) ||
+          pelicula.genero.toLowerCase().includes(texto) ||
+          pelicula.clasificacion.toLowerCase().includes(texto) ||
+          pelicula.salaAsignada.toLowerCase().includes(texto)) &&
+        (filtroGenero === 'Todos' || pelicula.genero === filtroGenero) &&
+        (filtroClasificacion === 'Todos' || pelicula.clasificacion === filtroClasificacion) &&
+        (filtroSala === 'Todos' || pelicula.salaAsignada === filtroSala) &&
+        (filtroEstado === 'Todos' || pelicula.estado === filtroEstado)
       );
     });
-  }, [peliculas, terminoBusqueda]);
+  }, [peliculas, terminoBusqueda, filtroGenero, filtroClasificacion, filtroSala, filtroEstado]);
+
+  const generos: FiltroOpcion[] = GENEROS.map((genero) => ({ value: genero, label: genero }));
+
+  const renderFilter = (
+    key: Exclude<FiltroAbierto, null>,
+    label: string,
+    options: FiltroOpcion[],
+    selected: Filtro,
+    onSelect: (value: Filtro) => void,
+  ) => (
+    <View style={styles.filterGroup}>
+      <ThemedText type="smallBold" style={styles.filterLabel}>{label}</ThemedText>
+      <TouchableOpacity
+        onPress={() => setFiltroAbierto(filtroAbierto === key ? null : key)}
+        style={[styles.filterButton, { backgroundColor: theme.background, borderColor: theme.textSecondary }]}
+        accessibilityRole="button"
+        accessibilityState={{ expanded: filtroAbierto === key }}
+      >
+        <ThemedText type="small" style={styles.filterValue}>
+          {options.find((option) => option.value === selected)?.label ?? 'Todos'}
+        </ThemedText>
+        <ThemedText type="small" style={styles.filterChevron}>{filtroAbierto === key ? '⌃' : '⌄'}</ThemedText>
+      </TouchableOpacity>
+
+      {filtroAbierto === key && (
+        <View style={[styles.dropdownMenu, { backgroundColor: theme.background, borderColor: theme.textSecondary }]}>
+          {options.map((option) => (
+          <TouchableOpacity
+            key={option.value}
+            onPress={() => {
+              onSelect(option.value);
+              setFiltroAbierto(null);
+            }}
+            style={[
+              styles.dropdownOption,
+              selected === option.value && styles.selectedOption,
+            ]}
+            accessibilityRole="button"
+            accessibilityState={{ selected: selected === option.value }}
+          >
+            <ThemedText
+              type="small"
+              style={selected === option.value ? [styles.filterButtonSelected, styles.selectedOptionText] : undefined}
+            >
+              {option.label}
+            </ThemedText>
+          </TouchableOpacity>
+          ))}
+        </View>
+      )}
+    </View>
+  );
 
   return (
     <ThemedView style={styles.container}>
@@ -63,10 +146,18 @@ export default function MovieTable({ puedeAdministrar = false, onEditMovie }: Mo
       <TextInput
         value={terminoBusqueda}
         onChangeText={setTerminoBusqueda}
-        placeholder="Buscar película, género, horario..."
+        placeholder="Buscar por nombre, género, clasificación o sala..."
         placeholderTextColor={theme.textSecondary}
+        accessibilityLabel="Buscar películas"
         style={[styles.searchInput, { backgroundColor: theme.background, borderColor: theme.textSecondary, color: theme.text }]}
       />
+
+      <View style={styles.filters}>
+        {renderFilter('genero', 'Género', [{ value: 'Todos', label: 'Todos' }, ...generos], filtroGenero, setFiltroGenero)}
+        {renderFilter('clasificacion', 'Clasificación', [{ value: 'Todos', label: 'Todos' }, ...CLASIFICACIONES], filtroClasificacion, setFiltroClasificacion)}
+        {renderFilter('sala', 'Sala', [{ value: 'Todos', label: 'Todas' }, ...SALAS], filtroSala, setFiltroSala)}
+        {renderFilter('estado', 'Estado', [{ value: 'Todos', label: 'Todos' }, ...ESTADOS], filtroEstado, setFiltroEstado)}
+      </View>
 
       {peliculasFiltradas.length === 0 ? (
         <ThemedText type="small" style={styles.emptyText}>
@@ -138,6 +229,52 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     padding: 10,
     backgroundColor: '#ffffff',
+  },
+  filters: {
+    gap: 10,
+  },
+  filterGroup: {
+    gap: 6,
+  },
+  filterLabel: {
+    fontSize: 12,
+  },
+  filterButton: {
+    minHeight: 40,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    borderWidth: 1,
+    borderRadius: 8,
+    paddingHorizontal: 10,
+    paddingVertical: 8,
+  },
+  filterValue: {
+    flex: 1,
+  },
+  filterChevron: {
+    marginLeft: 8,
+    fontWeight: '700',
+  },
+  dropdownMenu: {
+    borderWidth: 1,
+    borderRadius: 8,
+    marginTop: 4,
+    overflow: 'hidden',
+  },
+  dropdownOption: {
+    paddingHorizontal: 10,
+    paddingVertical: 9,
+  },
+  filterButtonSelected: {
+    fontWeight: '700',
+  },
+  selectedOption: {
+    backgroundColor: '#ffffff',
+    borderColor: '#ffffff',
+  },
+  selectedOptionText: {
+    color: '#000000',
   },
   emptyText: {
     textAlign: 'center',

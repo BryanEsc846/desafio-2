@@ -142,9 +142,9 @@ export default function TicketBooking() {
                     style={[
                       styles.optionButton,
                       { backgroundColor: theme.background, borderColor: theme.textSecondary },
-                      peliculaNombre === nombre && { backgroundColor: theme.backgroundSelected, borderColor: theme.text },
+                      peliculaNombre === nombre && styles.selectedOption,
                     ]}>
-                    <ThemedText type="small" themeColor="text">{nombre}</ThemedText>
+                    <ThemedText type="small" style={peliculaNombre === nombre ? styles.selectedOptionText : undefined}>{nombre}</ThemedText>
                   </TouchableOpacity>
                 ))
               )}
@@ -182,10 +182,10 @@ export default function TicketBooking() {
                     style={[
                       styles.optionButton,
                       { backgroundColor: theme.background, borderColor: theme.textSecondary },
-                      funcion === hora && { backgroundColor: theme.backgroundSelected, borderColor: theme.text },
+                      funcion === hora && styles.selectedOption,
                     ]}
                     disabled={!peliculaNombre}>
-                    <ThemedText type="small" themeColor="text">{hora}</ThemedText>
+                    <ThemedText type="small" style={funcion === hora ? styles.selectedOptionText : undefined}>{hora}</ThemedText>
                   </TouchableOpacity>
                 ))
               )}
@@ -209,9 +209,9 @@ export default function TicketBooking() {
               style={[
                 styles.optionButton,
                 { backgroundColor: theme.background, borderColor: theme.textSecondary },
-                salaId === id && { backgroundColor: theme.backgroundSelected, borderColor: theme.text },
+                salaId === id && styles.selectedOption,
               ]}>
-              <ThemedText type="small" themeColor="text">{salas.find((s) => s.id === id)?.nombre}</ThemedText>
+              <ThemedText type="small" style={salaId === id ? styles.selectedOptionText : undefined}>{salas.find((s) => s.id === id)?.nombre}</ThemedText>
             </TouchableOpacity>
           ))}
         </View>
@@ -294,6 +294,13 @@ const styles = StyleSheet.create({
   optionButtonSelected: {
     backgroundColor: '#dbeafe',
     borderColor: '#60a5fa',
+  },
+  selectedOption: {
+    backgroundColor: '#ffffff',
+    borderColor: '#ffffff',
+  },
+  selectedOptionText: {
+    color: '#000000',
   },
   bookingLayout: {
     gap: 16,

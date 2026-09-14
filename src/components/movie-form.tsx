@@ -6,7 +6,7 @@ import { ThemedView } from '@/components/themed-view';
 import { useTheme } from '@/hooks/use-theme';
 import { useAppDispatch, useAppSelector } from '@/store/hooks';
 import { agregarPelicula, editarPelicula } from '@/store/slices/peliculasSlice';
-import type { Pelicula } from '@/types/pelicula';
+import type { EstadoPelicula, Pelicula } from '@/types/pelicula';
 
 interface MovieFormProps {
   onSuccess?: () => void;
@@ -45,7 +45,8 @@ export default function MovieForm({ onSuccess, initialData }: MovieFormProps) {
     { value: '3', label: 'Sala VIP' },
   ];
 
-  const horarios = ['14:00', '16:30', '19:00', '21:30'];
+  const horarios = ['10:00', '12:00', '13:30', '14:00', '16:30', '19:00', '21:30'];
+  const estados: EstadoPelicula[] = ['Disponible', 'No disponible'];
   const generos = ['Acción', 'Comedia', 'Drama', 'Ciencia Ficción', 'Animación'];
   const clasificaciones = [
     { value: 'A', label: 'A (Todo público)' },
@@ -60,6 +61,13 @@ export default function MovieForm({ onSuccess, initialData }: MovieFormProps) {
 
   const handleSubmit = () => {
     setError('');
+
+    const codigoNormalizado = formData.codigo.trim();
+
+    if (!codigoNormalizado) {
+      setError('Error: El código de la película es obligatorio.');
+      return;
+    }
 
     if (!formData.nombre.trim()) {
       setError('Error: El nombre de la película es obligatorio.');
@@ -77,7 +85,9 @@ export default function MovieForm({ onSuccess, initialData }: MovieFormProps) {
     }
 
     const codigoDuplicado = peliculas.some(
-      (p) => p.codigo === formData.codigo && p.codigo !== initialData?.codigo,
+      (p) =>
+        p.codigo.trim().toLowerCase() === codigoNormalizado.toLowerCase() &&
+        p.codigo.trim().toLowerCase() !== initialData?.codigo.trim().toLowerCase(),
     );
     if (codigoDuplicado) {
       setError('Error: Ya existe una película registrada con este código.');
@@ -95,11 +105,13 @@ export default function MovieForm({ onSuccess, initialData }: MovieFormProps) {
       return;
     }
 
+    const peliculaGuardada = { ...formData, codigo: codigoNormalizado };
+
     if (isEditing && initialData) {
-      dispatch(editarPelicula({ codigoAnterior: initialData.codigo, pelicula: formData }));
+      dispatch(editarPelicula({ codigoAnterior: initialData.codigo, pelicula: peliculaGuardada }));
       Alert.alert('¡Película actualizada con éxito!');
     } else {
-      dispatch(agregarPelicula(formData));
+      dispatch(agregarPelicula(peliculaGuardada));
       Alert.alert('¡Película agregada con éxito!');
       setFormData(emptyFormData);
     }
@@ -148,9 +160,9 @@ export default function MovieForm({ onSuccess, initialData }: MovieFormProps) {
                 style={[
                   styles.optionButton,
                   { backgroundColor: theme.backgroundElement, borderColor: theme.textSecondary },
-                  formData.genero === genero && { backgroundColor: theme.backgroundSelected, borderColor: theme.text },
+                  formData.genero === genero && styles.selectedOption,
                 ]}>
-                <ThemedText type="small" themeColor="text">{genero}</ThemedText>
+                <ThemedText type="small" style={formData.genero === genero ? styles.selectedOptionText : undefined}>{genero}</ThemedText>
               </TouchableOpacity>
             ))}
           </View>
@@ -164,10 +176,10 @@ export default function MovieForm({ onSuccess, initialData }: MovieFormProps) {
                 style={[
                   styles.optionButton,
                   { backgroundColor: theme.backgroundElement, borderColor: theme.textSecondary },
-                  formData.clasificacion === clasificacion.value && { backgroundColor: theme.backgroundSelected, borderColor: theme.text },
+                  formData.clasificacion === clasificacion.value && styles.selectedOption,
                 ]}
               >
-                <ThemedText type="small" themeColor="text">{clasificacion.label}</ThemedText>
+                <ThemedText type="small" style={formData.clasificacion === clasificacion.value ? styles.selectedOptionText : undefined}>{clasificacion.label}</ThemedText>
               </TouchableOpacity>
             ))}
           </View>
@@ -202,10 +214,10 @@ export default function MovieForm({ onSuccess, initialData }: MovieFormProps) {
                 style={[
                   styles.optionButton,
                   { backgroundColor: theme.backgroundElement, borderColor: theme.textSecondary },
-                  formData.salaAsignada === sala.value && { backgroundColor: theme.backgroundSelected, borderColor: theme.text },
+                  formData.salaAsignada === sala.value && styles.selectedOption,
                 ]}
               >
-                <ThemedText type="small" themeColor="text">{sala.label}</ThemedText>
+                <ThemedText type="small" style={formData.salaAsignada === sala.value ? styles.selectedOptionText : undefined}>{sala.label}</ThemedText>
               </TouchableOpacity>
             ))}
           </View>
@@ -219,13 +231,32 @@ export default function MovieForm({ onSuccess, initialData }: MovieFormProps) {
                 style={[
                   styles.optionButton,
                   { backgroundColor: theme.backgroundElement, borderColor: theme.textSecondary },
-                  formData.hora === hora && { backgroundColor: theme.backgroundSelected, borderColor: theme.text },
+                  formData.hora === hora && styles.selectedOption,
                 ]}
               >
-                <ThemedText type="small" themeColor="text">{hora}</ThemedText>
+                <ThemedText type="small" style={formData.hora === hora ? styles.selectedOptionText : undefined}>{hora}</ThemedText>
               </TouchableOpacity>
             ))}
           </View>
+        </View>
+
+        <View style={[styles.selectBox, { backgroundColor: theme.background, borderColor: theme.textSecondary }]}>
+          <ThemedText type="small" style={[styles.label, { color: theme.text }]}>Estado</ThemedText>
+          {estados.map((estado) => (
+            <TouchableOpacity
+              key={estado}
+              onPress={() => handleChange('estado', estado)}
+              style={[
+                styles.optionButton,
+                { backgroundColor: theme.backgroundElement, borderColor: theme.textSecondary },
+                formData.estado === estado && styles.selectedOption,
+              ]}
+              accessibilityRole="button"
+              accessibilityState={{ selected: formData.estado === estado }}
+            >
+              <ThemedText type="small" style={formData.estado === estado ? styles.selectedOptionText : undefined}>{estado}</ThemedText>
+            </TouchableOpacity>
+          ))}
         </View>
 
         <TouchableOpacity onPress={handleSubmit} style={styles.submitButton}>
@@ -284,6 +315,13 @@ const styles = StyleSheet.create({
     paddingHorizontal: 10,
     borderRadius: 8,
     backgroundColor: '#f3f4f6',
+  },
+  selectedOption: {
+    backgroundColor: '#ffffff',
+    borderColor: '#ffffff',
+  },
+  selectedOptionText: {
+    color: '#000000',
   },
   optionSelected: {
     backgroundColor: '#dbeafe',

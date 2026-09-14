@@ -22,6 +22,10 @@ export const store = configureStore({
 export type RootState = ReturnType<typeof store.getState>;
 export type AppDispatch = typeof store.dispatch;
 
+let isHydrating = false;
+let persistenceQueue: Promise<void> = Promise.resolve();
+let hydrationPromise: Promise<void> | null = null;
+
 const readStorage = async <T>(key: string, fallback: T): Promise<T> => {
   try {
     const value = await AsyncStorage.getItem(key);
@@ -32,11 +36,7 @@ const readStorage = async <T>(key: string, fallback: T): Promise<T> => {
 };
 
 export const persistPeliculas = async (peliculas: RootState['peliculas']['lista']) => {
-  try {
-    await AsyncStorage.setItem(STORAGE_KEYS.peliculas, JSON.stringify(peliculas));
-  } catch {
-    // silencioso: no se interrumpe la app si el almacenamiento falla
-  }
+  await persistState({ ...store.getState(), peliculas: { lista: peliculas } });
 };
 
 export const eliminarPeliculaPersistida = (codigo: string) => {
@@ -59,22 +59,44 @@ const writeStorage = async (state: RootState) => {
   }
 };
 
-export const hydrateStore = async () => {
-  const [peliculas, salas, reservas] = await Promise.all([
-    readStorage(STORAGE_KEYS.peliculas, []),
-    readStorage(STORAGE_KEYS.salas, [
-      { id: '1', nombre: 'Sala 1', asientos: Array.from({ length: 25 }, (_, index) => ({ id: `${String.fromCharCode(65 + Math.floor(index / 5))}${(index % 5) + 1}`, estado: 'Disponible' as const })) },
-      { id: '2', nombre: 'Sala 2', asientos: Array.from({ length: 25 }, (_, index) => ({ id: `${String.fromCharCode(65 + Math.floor(index / 5))}${(index % 5) + 1}`, estado: 'Disponible' as const })) },
-      { id: '3', nombre: 'Sala VIP', asientos: Array.from({ length: 25 }, (_, index) => ({ id: `${String.fromCharCode(65 + Math.floor(index / 5))}${(index % 5) + 1}`, estado: 'Disponible' as const })) },
-    ]),
-    readStorage(STORAGE_KEYS.reservas, []),
-  ]);
+const persistState = (state: RootState) => {
+  persistenceQueue = persistenceQueue.then(() => writeStorage(state));
+  return persistenceQueue;
+};
 
-  store.dispatch(cargarPeliculas(peliculas));
-  store.dispatch(cargarSalas(salas));
-  store.dispatch(cargarHistorial(reservas));
+export const hydrateStore = () => {
+  if (hydrationPromise) {
+    return hydrationPromise;
+  }
+
+  hydrationPromise = (async () => {
+    isHydrating = true;
+
+    try {
+      const [peliculas, salas, reservas] = await Promise.all([
+        readStorage(STORAGE_KEYS.peliculas, []),
+        readStorage(STORAGE_KEYS.salas, [
+          { id: '1', nombre: 'Sala 1', asientos: Array.from({ length: 25 }, (_, index) => ({ id: `${String.fromCharCode(65 + Math.floor(index / 5))}${(index % 5) + 1}`, estado: 'Disponible' as const })) },
+          { id: '2', nombre: 'Sala 2', asientos: Array.from({ length: 25 }, (_, index) => ({ id: `${String.fromCharCode(65 + Math.floor(index / 5))}${(index % 5) + 1}`, estado: 'Disponible' as const })) },
+          { id: '3', nombre: 'Sala VIP', asientos: Array.from({ length: 25 }, (_, index) => ({ id: `${String.fromCharCode(65 + Math.floor(index / 5))}${(index % 5) + 1}`, estado: 'Disponible' as const })) },
+        ]),
+        readStorage(STORAGE_KEYS.reservas, []),
+      ]);
+
+      store.dispatch(cargarPeliculas(peliculas));
+      store.dispatch(cargarSalas(salas));
+      store.dispatch(cargarHistorial(reservas));
+    } finally {
+      isHydrating = false;
+      await persistState(store.getState());
+    }
+  })();
+
+  return hydrationPromise;
 };
 
 store.subscribe(() => {
-  void writeStorage(store.getState());
+  if (!isHydrating) {
+    void persistState(store.getState());
+  }
 });
