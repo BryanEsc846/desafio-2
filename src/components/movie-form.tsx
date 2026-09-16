@@ -6,6 +6,7 @@ import { ThemedView } from '@/components/themed-view';
 import { useTheme } from '@/hooks/use-theme';
 import { useAppDispatch, useAppSelector } from '@/store/hooks';
 import { agregarPelicula, editarPelicula } from '@/store/slices/peliculasSlice';
+import { persistCurrentState } from '@/store/store';
 import type { EstadoPelicula, Pelicula } from '@/types/pelicula';
 
 interface MovieFormProps {
@@ -59,7 +60,7 @@ export default function MovieForm({ onSuccess, initialData }: MovieFormProps) {
     setFormData((prev) => ({ ...prev, [field]: nextValue }));
   };
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     setError('');
 
     const codigoNormalizado = formData.codigo.trim();
@@ -109,9 +110,11 @@ export default function MovieForm({ onSuccess, initialData }: MovieFormProps) {
 
     if (isEditing && initialData) {
       dispatch(editarPelicula({ codigoAnterior: initialData.codigo, pelicula: peliculaGuardada }));
+      await persistCurrentState();
       Alert.alert('¡Película actualizada con éxito!');
     } else {
       dispatch(agregarPelicula(peliculaGuardada));
+      await persistCurrentState();
       Alert.alert('¡Película agregada con éxito!');
       setFormData(emptyFormData);
     }

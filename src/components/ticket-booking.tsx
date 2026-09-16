@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { Alert, ScrollView, StyleSheet, TouchableOpacity, View } from 'react-native';
+import { Alert, Modal, ScrollView, StyleSheet, TextInput, TouchableOpacity, View } from 'react-native';
 
 import SeatMap from '@/components/seat-map';
 import { ThemedText } from '@/components/themed-text';
@@ -25,6 +25,9 @@ export default function TicketBooking() {
   const [salaId, setSalaId] = useState('');
   const [isPeliculaOpen, setIsPeliculaOpen] = useState(false);
   const [isFuncionOpen, setIsFuncionOpen] = useState(false);
+  const [isClientModalOpen, setIsClientModalOpen] = useState(false);
+  const [nombreCliente, setNombreCliente] = useState('');
+  const [nombreClienteError, setNombreClienteError] = useState('');
 
   const nombresPeliculasUnicas = useMemo(
     () => Array.from(new Set(peliculasDisponibles.map((p) => p.nombre))),
@@ -94,8 +97,30 @@ export default function TicketBooking() {
       return;
     }
 
+    setNombreCliente('');
+    setNombreClienteError('');
+    setIsClientModalOpen(true);
+  };
+
+  const handleGuardarReserva = () => {
+    if (!peliculaSeleccionada || !salaSeleccionada || asientosSeleccionados.length === 0) {
+      setIsClientModalOpen(false);
+      Alert.alert('Completa los campos', 'La selección de la compra ya no está disponible.');
+      return;
+    }
+
+    const nombreNormalizado = nombreCliente.trim().replace(/\s+/g, ' ');
+    const partesNombre = nombreNormalizado.split(' ');
+    const nombreValido = partesNombre.every((parte) => /^[A-Za-zÁÉÍÓÚÜÑáéíóúüñ'-]{2,}$/.test(parte));
+
+    if (partesNombre.length < 2 || !nombreValido) {
+      setNombreClienteError('Ingresa tu nombre y apellido usando solo letras.');
+      return;
+    }
+
     const nuevaReserva = {
       id: generarIdReserva(),
+      nombreCliente: nombreNormalizado,
       peliculaId: peliculaSeleccionada.codigo,
       salaId: salaSeleccionada.id,
       funcion,
@@ -105,11 +130,14 @@ export default function TicketBooking() {
 
     dispatch(agregarReserva(nuevaReserva));
     dispatch(limpiarAsientosReservados(salaSeleccionada.id));
+  setIsClientModalOpen(false);
 
     Alert.alert('Reserva confirmada', `Total pagado: $${totalAPagar.toFixed(2)}`);
     setPeliculaNombre('');
     setSalaId('');
     setFuncion('');
+    setNombreCliente('');
+    setNombreClienteError('');
   };
 
   return (
@@ -243,6 +271,44 @@ export default function TicketBooking() {
           </ThemedView>
         </View>
       )}
+
+      <Modal visible={isClientModalOpen} transparent animationType="fade" onRequestClose={() => setIsClientModalOpen(false)}>
+        <View style={styles.modalOverlay}>
+          <ThemedView type="backgroundElement" style={styles.clientModalCard}>
+            <ThemedText type="subtitle">DATOS DEL CLIENTE</ThemedText>
+            <ThemedText type="small" style={styles.clientDescription}>
+              Ingresa tu nombre completo para asociarlo a la compra y al código QR.
+            </ThemedText>
+
+            <TextInput
+              value={nombreCliente}
+              onChangeText={(value) => {
+                setNombreCliente(value);
+                if (nombreClienteError) {
+                  setNombreClienteError('');
+                }
+              }}
+              placeholder="Nombre y apellido"
+              placeholderTextColor={theme.textSecondary}
+              autoCapitalize="words"
+              autoCorrect={false}
+              style={[styles.clientInput, { color: theme.text, backgroundColor: theme.background, borderColor: theme.textSecondary }]}
+              accessibilityLabel="Nombre completo del cliente"
+            />
+
+            {nombreClienteError ? <ThemedText type="small" style={styles.clientError}>{nombreClienteError}</ThemedText> : null}
+
+            <View style={styles.clientModalActions}>
+              <TouchableOpacity onPress={() => setIsClientModalOpen(false)} style={styles.cancelModalButton}>
+                <ThemedText type="smallBold" style={styles.cancelModalText}>Cancelar</ThemedText>
+              </TouchableOpacity>
+              <TouchableOpacity onPress={handleGuardarReserva} style={styles.confirmButton}>
+                <ThemedText type="smallBold" style={styles.confirmText}>Confirmar</ThemedText>
+              </TouchableOpacity>
+            </View>
+          </ThemedView>
+        </View>
+      </Modal>
     </ScrollView>
   );
 }
@@ -325,5 +391,45 @@ const styles = StyleSheet.create({
   },
   confirmText: {
     color: '#ffffff',
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.45)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
+  },
+  clientModalCard: {
+    width: '100%',
+    maxWidth: 420,
+    borderRadius: 16,
+    padding: 20,
+    gap: 12,
+  },
+  clientDescription: {
+    opacity: 0.8,
+  },
+  clientInput: {
+    borderWidth: 1,
+    borderRadius: 10,
+    paddingHorizontal: 12,
+    paddingVertical: 11,
+    fontSize: 16,
+  },
+  clientError: {
+    color: '#dc2626',
+  },
+  clientModalActions: {
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
+    gap: 10,
+    marginTop: 4,
+  },
+  cancelModalButton: {
+    paddingHorizontal: 12,
+    paddingVertical: 12,
+  },
+  cancelModalText: {
+    color: '#6b7280',
   },
 });

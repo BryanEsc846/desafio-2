@@ -1,7 +1,7 @@
 import { DarkTheme, DefaultTheme, Slot, ThemeProvider } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useColorScheme } from 'react-native';
 import { Provider } from 'react-redux';
 
@@ -12,9 +12,20 @@ SplashScreen.preventAutoHideAsync();
 
 export default function RootLayout() {
   const colorScheme = useColorScheme();
+  const [isStoreReady, setIsStoreReady] = useState(false);
 
   useEffect(() => {
-    void hydrateStore();
+    let cancelled = false;
+
+    void hydrateStore().then(() => {
+      if (!cancelled) {
+        setIsStoreReady(true);
+      }
+    });
+
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   return (
@@ -22,7 +33,7 @@ export default function RootLayout() {
       <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
         <AnimatedSplashOverlay />
         <StatusBar style={colorScheme === 'dark' ? 'light' : 'dark'} />
-        <Slot />
+        {isStoreReady ? <Slot /> : null}
       </ThemeProvider>
     </Provider>
   );

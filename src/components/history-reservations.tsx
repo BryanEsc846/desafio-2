@@ -21,7 +21,7 @@ export default function HistoryReservations() {
           const pelicula = peliculas.find((item) => item.codigo === reserva.peliculaId);
           const contenido = JSON.stringify({
             codigoReserva: reserva.id,
-            pelicula: reserva.peliculaId,
+            cliente: reserva.nombreCliente || 'Cliente no disponible',
             nombrePelicula: pelicula?.nombre || 'Película no disponible',
             sala: reserva.salaId,
             funcion: reserva.funcion,

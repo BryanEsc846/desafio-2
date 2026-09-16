@@ -30,13 +30,18 @@ const readStorage = async <T>(key: string, fallback: T): Promise<T> => {
   try {
     const value = await AsyncStorage.getItem(key);
     return value ? (JSON.parse(value) as T) : fallback;
-  } catch {
+  } catch (error) {
+    console.error(`No se pudo leer ${key} desde AsyncStorage.`, error);
     return fallback;
   }
 };
 
 export const persistPeliculas = async (peliculas: RootState['peliculas']['lista']) => {
   await persistState({ ...store.getState(), peliculas: { lista: peliculas } });
+};
+
+export const persistCurrentState = async () => {
+  await persistState(store.getState());
 };
 
 export const eliminarPeliculaPersistida = (codigo: string) => {
@@ -54,8 +59,8 @@ const writeStorage = async (state: RootState) => {
       AsyncStorage.setItem(STORAGE_KEYS.salas, JSON.stringify(state.salas.lista)),
       AsyncStorage.setItem(STORAGE_KEYS.reservas, JSON.stringify(state.reservas.historial)),
     ]);
-  } catch {
-    // silencioso: no se interrumpe la app si el almacenamiento falla
+  } catch (error) {
+    console.error('No se pudo guardar el estado de CineApp.', error);
   }
 };
 
