@@ -18,9 +18,11 @@ export default function HistoryReservations() {
     const generarCodigosQr = async () => {
       const resultados = await Promise.all(
         reservas.map(async (reserva) => {
+          const pelicula = peliculas.find((item) => item.codigo === reserva.peliculaId);
           const contenido = JSON.stringify({
             codigoReserva: reserva.id,
             pelicula: reserva.peliculaId,
+            nombrePelicula: pelicula?.nombre || 'Película no disponible',
             sala: reserva.salaId,
             funcion: reserva.funcion,
             asientos: reserva.asientosSeleccionados.map((asiento) => asiento.id),
@@ -41,7 +43,7 @@ export default function HistoryReservations() {
     return () => {
       cancelled = true;
     };
-  }, [reservas]);
+  }, [peliculas, reservas]);
 
   return (
     <ThemedView style={styles.container}>

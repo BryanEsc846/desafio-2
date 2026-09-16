@@ -1,3 +1,4 @@
+import { CameraView, useCameraPermissions, type BarcodeScanningResult } from 'expo-camera';
 import * as LocalAuthentication from 'expo-local-authentication';
 import { useState } from 'react';
 import {
@@ -18,11 +19,15 @@ import MovieTable from '@/components/movie-table';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import TicketBooking from '@/components/ticket-booking';
+import { useTheme } from '@/hooks/use-theme';
 import type { Pelicula } from '@/types/pelicula';
 
 const ADMIN_PIN = '1234';
 
+type DatosCompraQr = Record<string, unknown>;
+
 export default function CinemaHomeScreen() {
+  const theme = useTheme();
   const [activeTab, setActiveTab] = useState<'peliculas' | 'ventas' | 'historial' | 'administrador'>('peliculas');
   const [adminTab, setAdminTab] = useState<'dashboard' | 'peliculas' >('dashboard');
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -32,6 +37,11 @@ export default function CinemaHomeScreen() {
   const [pinInput, setPinInput] = useState('');
   const [pinError, setPinError] = useState('');
   const [isCheckingBiometric, setIsCheckingBiometric] = useState(false);
+  const [isQrScannerOpen, setIsQrScannerOpen] = useState(false);
+  const [isQrScannerActive, setIsQrScannerActive] = useState(true);
+  const [qrDatos, setQrDatos] = useState<DatosCompraQr | null>(null);
+  const [qrError, setQrError] = useState('');
+  const [cameraPermission, requestCameraPermission] = useCameraPermissions();
 
   const currentTab = activeTab === 'administrador' ? adminTab : activeTab;
 
@@ -113,6 +123,52 @@ export default function CinemaHomeScreen() {
     setActiveTab('administrador');
   };
 
+  const openQrScanner = () => {
+    setQrError('');
+    setIsQrScannerActive(true);
+    setIsQrScannerOpen(true);
+  };
+
+  const closeQrScanner = () => {
+    setIsQrScannerOpen(false);
+    setIsQrScannerActive(false);
+    setQrError('');
+  };
+
+  const handleQrScanned = ({ data }: BarcodeScanningResult) => {
+    if (!isQrScannerActive) {
+      return;
+    }
+
+    setIsQrScannerActive(false);
+
+    try {
+      const parsedData: unknown = JSON.parse(data);
+
+      if (typeof parsedData !== 'object' || parsedData === null || Array.isArray(parsedData)) {
+        throw new Error('Formato inválido');
+      }
+
+      setQrDatos(parsedData as DatosCompraQr);
+      setQrError('');
+      setIsQrScannerOpen(false);
+    } catch {
+      setQrError('El código escaneado no contiene una compra válida.');
+    }
+  };
+
+  const formatQrValue = (value: unknown) => {
+    if (Array.isArray(value)) {
+      return value.map((item) => String(item)).join(', ');
+    }
+
+    if (typeof value === 'object' && value !== null) {
+      return JSON.stringify(value);
+    }
+
+    return String(value);
+  };
+
   return (
     <SafeAreaView style={styles.safeArea}>
       <ThemedView style={styles.container}>
@@ -160,9 +216,16 @@ export default function CinemaHomeScreen() {
             <View style={styles.section}>
               <View style={styles.sectionHeader}>
                 <ThemedText type="subtitle">DASHBOARD</ThemedText>
-                <TouchableOpacity onPress={() => setActiveTab('ventas')} style={styles.primaryButton}>
-                  <ThemedText type="smallBold" style={styles.primaryButtonText}>+ NUEVA VENTA</ThemedText>
-                </TouchableOpacity>
+                <View style={styles.dashboardActions}>
+                  {Platform.OS !== 'web' && (
+                    <TouchableOpacity onPress={openQrScanner} style={styles.secondaryButton}>
+                      <ThemedText type="smallBold" style={styles.secondaryButtonText}>ESCANEAR COMPRA</ThemedText>
+                    </TouchableOpacity>
+                  )}
+                  <TouchableOpacity onPress={() => setActiveTab('ventas')} style={styles.primaryButton}>
+                    <ThemedText type="smallBold" style={styles.primaryButtonText}>+ NUEVA VENTA</ThemedText>
+                  </TouchableOpacity>
+                </View>
               </View>
               <CinemaDashboard />
             </View>
@@ -273,6 +336,78 @@ export default function CinemaHomeScreen() {
             </ThemedView>
           </View>
         </Modal>
+
+        <Modal visible={isQrScannerOpen} animationType="slide" onRequestClose={closeQrScanner}>
+          <SafeAreaView style={styles.scannerScreen}>
+            <View style={styles.scannerHeader}>
+              <ThemedText type="subtitle">ESCANEAR COMPRA</ThemedText>
+              <TouchableOpacity onPress={closeQrScanner} style={styles.cancelButton}>
+                <ThemedText type="smallBold" style={styles.cancelButtonText}>Cerrar</ThemedText>
+              </TouchableOpacity>
+            </View>
+
+            {!cameraPermission ? (
+              <ThemedText type="small" style={styles.scannerMessage}>Preparando la cámara...</ThemedText>
+            ) : !cameraPermission.granted ? (
+              <View style={styles.scannerPermission}>
+                <ThemedText type="small" style={styles.scannerMessage}>
+                  Necesitamos permiso para usar la cámara y leer el código QR de la compra.
+                </ThemedText>
+                <TouchableOpacity onPress={requestCameraPermission} style={styles.primaryButton}>
+                  <ThemedText type="smallBold" style={styles.primaryButtonText}>PERMITIR CÁMARA</ThemedText>
+                </TouchableOpacity>
+              </View>
+            ) : (
+              <View style={styles.scannerContainer}>
+                <CameraView
+                  style={styles.camera}
+                  facing="back"
+                  barcodeScannerSettings={{ barcodeTypes: ['qr'] }}
+                  onBarcodeScanned={isQrScannerActive ? handleQrScanned : undefined}
+                />
+                <View style={styles.scannerGuide}>
+                  <View style={styles.scannerFrame} />
+                  <ThemedText type="small" style={styles.scannerHint}>Alinea el código QR dentro del marco</ThemedText>
+                </View>
+              </View>
+            )}
+
+            {qrError ? (
+              <View style={styles.scannerError}>
+                <ThemedText type="small" style={styles.pinError}>{qrError}</ThemedText>
+                <TouchableOpacity onPress={() => { setQrError(''); setIsQrScannerActive(true); }} style={styles.secondaryButton}>
+                  <ThemedText type="smallBold" style={styles.secondaryButtonText}>INTENTAR DE NUEVO</ThemedText>
+                </TouchableOpacity>
+              </View>
+            ) : null}
+          </SafeAreaView>
+        </Modal>
+
+        <Modal visible={qrDatos !== null} transparent animationType="fade" onRequestClose={() => setQrDatos(null)}>
+          <View style={styles.modalOverlay}>
+            <ThemedView type="backgroundElement" style={styles.qrDetailsCard}>
+              <View style={styles.modalHeader}>
+                <ThemedText type="subtitle">DATOS DE LA COMPRA</ThemedText>
+                <TouchableOpacity onPress={() => setQrDatos(null)}>
+                  <ThemedText type="smallBold" style={styles.closeText}>✕</ThemedText>
+                </TouchableOpacity>
+              </View>
+
+              <ScrollView contentContainerStyle={styles.qrDetailsContent}>
+                {qrDatos && Object.entries(qrDatos).map(([key, value]) => (
+                  <View key={key} style={styles.qrDetailRow}>
+                    <ThemedText type="smallBold" style={styles.qrDetailLabel}>{key}</ThemedText>
+                    <ThemedText type="small" style={[styles.qrDetailValue, { color: theme.text }]}>{formatQrValue(value)}</ThemedText>
+                  </View>
+                ))}
+              </ScrollView>
+
+              <TouchableOpacity onPress={() => setQrDatos(null)} style={styles.primaryButton}>
+                <ThemedText type="smallBold" style={styles.primaryButtonText}>CERRAR</ThemedText>
+              </TouchableOpacity>
+            </ThemedView>
+          </View>
+        </Modal>
       </ThemedView>
     </SafeAreaView>
   );
@@ -330,6 +465,12 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     flexWrap: 'wrap',
     gap: 12,
+  },
+  dashboardActions: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 10,
+    maxWidth: '100%',
   },
   primaryButton: {
     backgroundColor: '#16a34a',
@@ -435,6 +576,87 @@ const styles = StyleSheet.create({
   },
   secondaryButtonText: {
     color: '#111827',
+  },
+  scannerScreen: {
+    flex: 1,
+    backgroundColor: '#f3f4f6',
+  },
+  scannerHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: '#d1d5db',
+  },
+  scannerContainer: {
+    flex: 1,
+    position: 'relative',
+    backgroundColor: '#111827',
+  },
+  camera: {
+    flex: 1,
+  },
+  scannerGuide: {
+    ...StyleSheet.absoluteFill,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  scannerFrame: {
+    width: 240,
+    height: 240,
+    borderWidth: 3,
+    borderColor: '#ffffff',
+    borderRadius: 16,
+  },
+  scannerHint: {
+    color: '#ffffff',
+    marginTop: 20,
+    backgroundColor: 'rgba(0,0,0,0.55)',
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 8,
+  },
+  scannerPermission: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 24,
+    gap: 16,
+  },
+  scannerMessage: {
+    textAlign: 'center',
+    maxWidth: 360,
+  },
+  scannerError: {
+    alignItems: 'center',
+    gap: 10,
+    padding: 16,
+  },
+  qrDetailsCard: {
+    width: '100%',
+    maxWidth: 540,
+    maxHeight: '82%',
+    borderRadius: 16,
+    padding: 16,
+    gap: 12,
+  },
+  qrDetailsContent: {
+    gap: 10,
+  },
+  qrDetailRow: {
+    borderWidth: 1,
+    borderColor: '#d1d5db',
+    borderRadius: 10,
+    padding: 12,
+    gap: 4,
+  },
+  qrDetailLabel: {
+    color: '#1d4ed8',
+    textTransform: 'uppercase',
+  },
+  qrDetailValue: {
   },
   cancelButton: {
     alignItems: 'center',
