@@ -1,56 +1,80 @@
-# Welcome to your Expo app 👋
+# Proyecto Expo - Desafío 2
 
-This is an [Expo](https://expo.dev) project created with [`create-expo-app`](https://www.npmjs.com/package/create-expo-app).
+Este proyecto fue creado con Expo y está listo para ejecutarse en tu entorno local.
 
-## Get started
+## Requisitos previos
 
-1. Install dependencies
+Antes de comenzar, asegúrate de tener instalado lo siguiente:
 
-   ```bash
-   npm install
-   ```
+- Git
+- Node.js (versión recomendada: 18 o superior)
+- npm o yarn
+- Expo Go en tu dispositivo móvil o un emulador configurado
 
-2. Start the app
+## Clonar el proyecto
 
-   ```bash
-   npx expo start
-   ```
+Abre tu terminal y ejecuta:
 
-In the output, you'll find options to open the app in a
+```bash
+git clone <URL-del-repositorio>
+cd desafio-2
+```
 
-- [development build](https://docs.expo.dev/develop/development-builds/introduction/)
-- [Android emulator](https://docs.expo.dev/workflow/android-studio-emulator/)
-- [iOS simulator](https://docs.expo.dev/workflow/ios-simulator/)
-- [Expo Go](https://expo.dev/go), a limited sandbox for trying out app development with Expo
+Si ya tienes el proyecto descargado en tu máquina, solo entra a la carpeta:
 
-You can start developing by editing the files inside the **app** directory. This project uses [file-based routing](https://docs.expo.dev/router/introduction).
+```bash
+cd desafio-2
+```
 
-## Get a fresh project
+## Instalar dependencias
 
-When you're ready, run:
+Dentro de la carpeta del proyecto, instala las librerías necesarias:
+
+```bash
+npm install
+```
+
+## Ejecutar la aplicación
+
+Inicia el proyecto con Expo:
+
+```bash
+npx expo start
+```
+
+Luego, en la terminal verás un código QR y varias opciones. Puedes abrir la app en:
+
+- Expo Go en tu teléfono
+- Un emulador Android o iOS
+- El navegador, si lo deseas
+
+## Comandos útiles
+
+- Para reiniciar el proyecto base:
 
 ```bash
 npm run reset-project
 ```
 
-This command will move the starter code to the **app-example** directory and create a blank **app** directory where you can start developing.
+- Para verificar el código con ESLint:
 
-### Other setup steps
+```bash
+npx expo lint
+```
 
-- To set up ESLint for linting, run `npx expo lint`, or follow our guide on ["Using ESLint and Prettier"](https://docs.expo.dev/guides/using-eslint/)
-- If you'd like to set up unit testing, follow our guide on ["Unit Testing with Jest"](https://docs.expo.dev/develop/unit-testing/)
-- Learn more about the TypeScript setup in this template in our guide on ["Using TypeScript"](https://docs.expo.dev/guides/typescript/)
+## Desarrollo
 
-## Learn more
+Puedes empezar a modificar los archivos dentro de la carpeta `src` y probar cambios en tiempo real con Expo.
 
-To learn more about developing your project with Expo, look at the following resources:
+## Solución de problemas comunes
 
-- [Expo documentation](https://docs.expo.dev/): Learn fundamentals, or go into advanced topics with our [guides](https://docs.expo.dev/guides).
-- [Learn Expo tutorial](https://docs.expo.dev/tutorial/introduction/): Follow a step-by-step tutorial where you'll create a project that runs on Android, iOS, and the web.
+Si la app no inicia correctamente, revisa lo siguiente:
 
-## Join the community
+1. Verifica que Node.js esté instalado correctamente.
+2. Ejecuta `npm install` nuevamente si faltan dependencias.
+3. Asegúrate de que no haya errores en la terminal al iniciar Expo.
+4. Si usas un emulador, comprueba que esté encendido y configurado.
 
-Join our community of developers creating universal apps.
+---
 
-- [Expo on GitHub](https://github.com/expo/expo): View our open source platform and contribute.
-- [Discord community](https://chat.expo.dev): Chat with Expo users and ask questions.
+
